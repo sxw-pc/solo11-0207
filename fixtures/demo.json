@@ -1,0 +1,33 @@
+{
+  "capture": [
+    {"type":"turn","id":"turn-b","rev":1,"cue":"questions","cue_rev":1,"shift":"shift-b","person":"Lin","start":120,"end":140},
+    {"type":"relay","id":"relay-120","rev":1,"outgoing":"turn-a","out_rev":1,"incoming":"turn-b","in_rev":1,"at":120,"witnessed":1},
+    {"type":"session","id":"main","rev":1,"start":100,"end":140,"language":"CSL"},
+    {"type":"session","id":"side","rev":1,"start":150,"end":160,"language":"CSL"},
+    {"type":"cue","id":"welcome","rev":1,"session":"main","start":100,"end":120,"terms":"silt,tidal"},
+    {"type":"cue","id":"questions","rev":1,"session":"main","start":120,"end":140,"terms":"estuary"},
+    {"type":"cue","id":"workshop","rev":1,"session":"side","start":150,"end":156,"terms":""},
+    {"type":"rehearsal","id":"r-silt","rev":1,"cue":"welcome","cue_rev":1,"term":"silt","language":"CSL","accepted":1},
+    {"type":"rehearsal","id":"r-tidal","rev":1,"cue":"welcome","cue_rev":1,"term":"tidal","language":"CSL","accepted":1},
+    {"type":"rehearsal","id":"r-estuary","rev":1,"cue":"questions","cue_rev":1,"term":"estuary","language":"CSL","accepted":1},
+    {"type":"credential","id":"c-qiao","rev":1,"person":"Qiao","language":"CSL","start":90,"end":120,"approved":1},
+    {"type":"credential","id":"c-lin-early","rev":1,"person":"Lin","language":"CSL","start":117,"end":119,"approved":1},
+    {"type":"credential","id":"c-lin","rev":1,"person":"Lin","language":"CSL","start":119,"end":160,"approved":1},
+    {"type":"shift","id":"shift-a","rev":1,"person":"Qiao","session":"main","start":95,"end":120},
+    {"type":"shift","id":"shift-b","rev":1,"person":"Lin","session":"main","start":117,"end":145},
+    {"type":"turn","id":"turn-a","rev":1,"cue":"welcome","cue_rev":1,"shift":"shift-a","person":"Qiao","start":100,"end":120},
+    {"type":"layout","id":"live-left","rev":1,"width":640,"height":360,"left":20,"top":160,"right":220,"bottom":340},
+    {"type":"layout","id":"live-right","rev":1,"width":640,"height":360,"left":420,"top":160,"right":620,"bottom":340},
+    {"type":"layout","id":"replay-right","rev":1,"width":640,"height":360,"left":420,"top":160,"right":620,"bottom":340},
+    {"type":"overlay","id":"live-bug","rev":1,"layout":"live-right","layout_rev":1,"left":520,"top":290,"right":590,"bottom":320},
+    {"type":"overlay","id":"replay-bug","rev":1,"layout":"replay-right","layout_rev":1,"left":590,"top":290,"right":620,"bottom":320},
+    {"type":"asset","id":"replay-main","rev":1,"session":"main","session_rev":1,"start":100,"end":140},
+    {"type":"asset","id":"replay-side","rev":1,"session":"side","session_rev":1,"start":151,"end":157},
+    {"type":"review","id":"live-a","rev":1,"asset":"-","asset_rev":0,"turn":"turn-a","turn_rev":1,"start":100,"end":120,"layout":"live-left","layout_rev":1,"left":40,"top":180,"right":180,"bottom":320,"approved":1},
+    {"type":"review","id":"live-b0","rev":1,"asset":"-","asset_rev":0,"turn":"turn-b","turn_rev":1,"start":120,"end":126,"layout":"live-right","layout_rev":1,"left":440,"top":180,"right":580,"bottom":320,"approved":1},
+    {"type":"review","id":"live-b1","rev":1,"asset":"-","asset_rev":0,"turn":"turn-b","turn_rev":1,"start":126,"end":140,"layout":"live-left","layout_rev":1,"left":40,"top":180,"right":180,"bottom":320,"approved":1},
+    {"type":"review","id":"replay-a","rev":1,"asset":"replay-main","asset_rev":1,"turn":"turn-a","turn_rev":1,"start":100,"end":120,"layout":"replay-right","layout_rev":1,"left":440,"top":180,"right":580,"bottom":320,"approved":1},
+    {"type":"review","id":"replay-b","rev":1,"asset":"replay-main","asset_rev":1,"turn":"turn-b","turn_rev":1,"start":120,"end":140,"layout":"replay-right","layout_rev":1,"left":440,"top":180,"right":580,"bottom":320,"approved":1}
+  ],
+  "sign": ["replay-main"]
+}

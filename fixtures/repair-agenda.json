@@ -1,0 +1,9 @@
+[
+  {"type":"rehearsal","id":"r-estuary","rev":2,"cue":"questions","cue_rev":2,"term":"estuary","language":"CSL","accepted":1},
+  {"type":"rehearsal","id":"r-salinity","rev":1,"cue":"questions","cue_rev":2,"term":"salinity","language":"CSL","accepted":1},
+  {"type":"turn","id":"turn-b","rev":2,"cue":"questions","cue_rev":2,"shift":"shift-b","person":"Lin","start":120,"end":140},
+  {"type":"relay","id":"relay-120","rev":2,"outgoing":"turn-a","out_rev":1,"incoming":"turn-b","in_rev":2,"at":120,"witnessed":1},
+  {"type":"review","id":"live-b0","rev":2,"asset":"-","asset_rev":0,"turn":"turn-b","turn_rev":2,"start":120,"end":126,"layout":"live-right","layout_rev":1,"left":440,"top":180,"right":580,"bottom":320,"approved":1},
+  {"type":"review","id":"live-b1","rev":2,"asset":"-","asset_rev":0,"turn":"turn-b","turn_rev":2,"start":126,"end":140,"layout":"live-left","layout_rev":1,"left":40,"top":180,"right":180,"bottom":320,"approved":1},
+  {"type":"review","id":"replay-b","rev":2,"asset":"replay-main","asset_rev":1,"turn":"turn-b","turn_rev":2,"start":120,"end":140,"layout":"replay-right","layout_rev":1,"left":440,"top":180,"right":580,"bottom":320,"approved":1}
+]
