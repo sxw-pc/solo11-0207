@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 TABLES = {
+    'seat_pattern': 'cue:T cue_rev:I label:T pulse:T',
     'session': 'start:I end:I language:T',
     'cue': 'session:T start:I end:I terms:T',
     'rehearsal': 'cue:T cue_rev:I term:T language:T accepted:I',
@@ -83,6 +84,8 @@ def validate(table, record, columns):
     for lo, hi in [('start', 'end'), ('left', 'right'), ('top', 'bottom')]:
         if lo in record and record[lo] >= record[hi]:
             raise ValueError(f'{table}.{lo} must be less than {hi}')
+    if table == 'seat_pattern' and (not 1 <= len(record['pulse']) <= 8 or set(record['pulse']) - {'0', '1'}):
+        raise ValueError('seat pulse requires one to eight bits')
     if table == 'layout' and (not record['width'] or not record['height']):
         raise ValueError('canvas must be positive')
     if table == 'asset' and record['id'] == '-':

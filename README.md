@@ -41,3 +41,7 @@ python -B -m sign_broadcast --db event.sqlite resign replay-main BASIS director
 补录回放角标后，回放缺口变为 40 秒，旧凭证失效。修正使角标只接触关键区边界，再读取回放报告并把 `BASIS` 换成报告的 `basis`。写事务会复核当前可交付性及依据，相同有效依据的重签返回已有编号。每份历史签发保留当时的依据及证据快照。
 
 `late-agenda.json` 和 `repair-agenda.json` 可在另一份样例库演示议程换版及逐项重绑定，修复后使用当前 `basis` 重签。`repair-live.json` 单独修复直播角标。两路修正各影响自身的画面证据。
+
+## 有边界的座席手势带
+
+合成排练座席可用 `seat_pattern` 原件登记 `cue`、`cue_rev`、`label` 和 1 至 8 位 `pulse`。`seat-tape CUE LABEL...` 输出按发送次序排列的完整帧，`seat-read CUE FRAME...` 按当前议程条目的绑定码表将帧逐个还原上传读数。同一标签和同一编码均须唯一。这里需要每帧的边界，只模拟数据采录。

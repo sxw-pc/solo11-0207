@@ -8,6 +8,7 @@ from .agenda import Agenda
 from .crew import Crew
 from .delivery import Delivery, resign
 from .picture import Picture
+from .seat_tape import emit, receive
 from .store import connect, ingest, transaction
 
 
@@ -56,6 +57,10 @@ def parser():
     report = sub.add_parser('delivery')
     report.add_argument('session')
     report.add_argument('--asset')
+    for name in ('seat-tape', 'seat-read'):
+        tape = sub.add_parser(name)
+        tape.add_argument('cue')
+        tape.add_argument('entries', nargs='+')
     sub.add_parser('recompute')
     sign = sub.add_parser('resign')
     for key in ('asset', 'basis', 'operator'):
@@ -71,6 +76,9 @@ def run(db, args):
     if args.command == 'resign':
         return {'signature': resign(db, build, args.asset, args.basis, args.operator)}
     with transaction(db, write=False):
+        if args.command in ('seat-tape', 'seat-read'):
+            operation = emit if args.command == 'seat-tape' else receive
+            return operation(db, args.cue, args.entries)
         if args.command == 'recompute':
             return recompute(db)
         agenda, crew, picture, delivery = build(db)
