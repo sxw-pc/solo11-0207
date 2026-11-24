@@ -1,0 +1,4 @@
+{
+  "feed":"main-recorder", "start":100, "end":140,
+  "samples":[{"at":103,"state":"up"},{"at":119,"state":"down"},{"at":126,"state":"up"}]
+}

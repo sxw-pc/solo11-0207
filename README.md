@@ -41,3 +41,7 @@ python -B -m sign_broadcast --db event.sqlite resign replay-main BASIS director
 补录回放角标后，回放缺口变为 40 秒，旧凭证失效。修正使角标只接触关键区边界，再读取回放报告并把 `BASIS` 换成报告的 `basis`。写事务会复核当前可交付性及依据，相同有效依据的重签返回已有编号。每份历史签发保留当时的依据及证据快照。
 
 `late-agenda.json` 和 `repair-agenda.json` 可在另一份样例库演示议程换版及逐项重绑定，修复后使用当前 `basis` 重签。`repair-live.json` 单独修复直播角标。两路修正各影响自身的画面证据。
+
+## 录制设备状态采录
+
+`python -B -m sign_broadcast --db event.sqlite recorder-health main fixtures/recorder-health.json` 读取管理终端导出的设备状态。首个观察前保留未知时间，观察的状态沿用到下一次变更或包边界。设备服务秒和观察原件可在同一报告核对，这个查询不修改场次或法律声明。

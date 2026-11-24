@@ -5,6 +5,7 @@ from contextlib import closing
 from pathlib import Path
 
 from .agenda import Agenda
+from .recorder_uptime import assess as recorder_uptime
 from .crew import Crew
 from .delivery import Delivery, resign
 from .picture import Picture
@@ -57,6 +58,9 @@ def parser():
     report.add_argument('session')
     report.add_argument('--asset')
     sub.add_parser('recompute')
+    monitor = sub.add_parser('recorder-health')
+    monitor.add_argument('session')
+    monitor.add_argument('file')
     sign = sub.add_parser('resign')
     for key in ('asset', 'basis', 'operator'):
         sign.add_argument(key)
@@ -74,6 +78,8 @@ def run(db, args):
         if args.command == 'recompute':
             return recompute(db)
         agenda, crew, picture, delivery = build(db)
+        if args.command == 'recorder-health':
+            return recorder_uptime(read(args.file), agenda.sessions[args.session])
         if args.command == 'delivery':
             return delivery.assess(args.session, args.asset)
         return {'agenda': agenda, 'crew': crew, 'picture': picture}[args.command].assess(args.id)
