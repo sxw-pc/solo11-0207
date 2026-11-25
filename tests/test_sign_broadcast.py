@@ -3,9 +3,11 @@ import unittest
 from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
-from sign_broadcast.__main__ import build, demo, read, recompute
+from sign_broadcast.__main__ import build, demo, read, recompute, run
 from sign_broadcast.delivery import resign
+from sign_broadcast.splice import Splice
 from sign_broadcast.store import connect, ingest, transaction
 
 
@@ -30,6 +32,17 @@ class BroadcastTests(unittest.TestCase):
 
     def replay(self):
         return build(self.db)[3].assess('main', 'replay-main')
+
+    def splice(self, plan):
+        agenda, crew, picture, delivery = build(self.db)
+        return Splice(agenda, crew, picture, delivery).assess(plan)
+
+    def plan(self):
+        return read(FIXTURES / 'splice-main.json')
+
+    def preroll(self, target):
+        return [{'track': track, 'target': list(target), 'session': 'main',
+                 'asset': 'replay-main', 'rev': 1, 'source': [117, 120]} for track in ('program', 'sign')]
 
     def test_agenda_reports_gaps_conflicts_and_outside_cues(self):
         agenda = build(self.db)[0]
@@ -202,3 +215,153 @@ class BroadcastTests(unittest.TestCase):
         with closing(connect(self.path)) as other, transaction(other, write=False):
             self.assertEqual(recompute(other), self.baseline)
         self.assertEqual(demo(self.db, FIXTURES / 'demo.json'), self.baseline)
+
+    def test_splice_inherited_preroll_delivers_full_master(self):
+        plan = self.plan()
+        plan['fragments'] += self.preroll((117, 120))
+        result = self.splice(plan)
+        self.assertEqual(result['status'], 'ready')
+        self.assertEqual(result['target'], [100, 140])
+        self.assertEqual(result['delivered_seconds'], 40)
+        self.assertEqual(result['pending_seconds'], 0)
+        seam = result['seams'][0]
+        self.assertEqual((seam['target'], seam['session'], seam['source']), (120, 'main', 120))
+        self.assertEqual(seam['handoffs'], [{'outgoing': 'turn-a', 'incoming': 'turn-b', 'status': 'ready'}])
+        self.assertEqual(seam['status'], 'context')
+        self.assertEqual(seam['context']['kind'], 'preroll')
+        self.assertEqual(seam['context']['target'], [117, 120])
+        self.assertEqual(seam['context']['source'], [117, 120])
+        self.assertEqual(result['receipts'][0]['status'], 'unused')
+
+    def test_splice_opening_receipt_covers_seam_for_short_master(self):
+        result = self.splice(self.plan())
+        self.assertEqual(result['status'], 'pending')
+        self.assertEqual(result['delivered_seconds'], 37)
+        self.assertEqual(result['pending_seconds'], 3)
+        gap = result['timeline'][1]
+        self.assertEqual((gap['start'], gap['end']), (117, 120))
+        self.assertEqual(gap['reasons'], ['program-source-missing', 'sign-source-missing'])
+        seam = result['seams'][0]
+        self.assertEqual(seam['status'], 'receipt')
+        self.assertEqual(seam['context'], {'kind': 'receipt', 'id': 'opening-120'})
+        self.assertEqual(result['receipts'], [{'id': 'opening-120', 'status': 'accepted', 'reasons': []}])
+
+    def test_splice_short_master_without_receipt_pends_seam(self):
+        plan = self.plan()
+        del plan['receipts']
+        result = self.splice(plan)
+        self.assertEqual(result['delivered_seconds'], 34)
+        self.assertEqual(result['pending_seconds'], 6)
+        seam = result['seams'][0]
+        self.assertEqual(seam['status'], 'pending')
+        self.assertEqual(seam['context'], None)
+        self.assertEqual(seam['reasons'], ['missing-relay-context'])
+        row = next(row for row in result['timeline'] if row['start'] == 120)
+        self.assertEqual((row['end'], row['reasons']), (123, ['missing-relay-context']))
+
+    def test_splice_preroll_elsewhere_leaves_seam_pending(self):
+        plan = self.plan()
+        del plan['receipts']
+        plan['fragments'] += self.preroll((140, 143))
+        result = self.splice(plan)
+        self.assertEqual(result['seams'][0]['status'], 'pending')
+        self.assertEqual(result['seams'][0]['reasons'], ['missing-relay-context'])
+        self.assertEqual(result['pending_seconds'], 6)
+        moved = next(row for row in result['timeline'] if row['start'] == 140)
+        self.assertEqual(moved['status'], 'ready')
+        self.assertEqual((moved['program']['start'], moved['program']['end']), (117, 120))
+        self.assertEqual((moved['sign']['start'], moved['sign']['end']), (117, 120))
+
+    def test_splice_sign_offset_breaks_source_alignment(self):
+        plan = self.plan()
+        del plan['receipts']
+        for row in plan['fragments']:
+            if row['track'] == 'sign':
+                row['source'] = [row['source'][0] + 1, row['source'][1] + 1]
+        result = self.splice(plan)
+        self.assertEqual(result['timeline'][0]['reasons'], ['source-second-mismatch'])
+        self.assertEqual(result['timeline'][-1]['reasons'], ['source-second-mismatch'])
+        shifted = next(row for row in result['timeline'] if row['start'] == 120)
+        self.assertEqual(shifted['reasons'], ['missing-relay-context', 'source-second-mismatch'])
+        self.assertEqual(result['pending_seconds'], 40)
+        self.assertEqual(result['delivered_seconds'], 0)
+
+    def test_splice_keeps_ambiguous_sources_for_a_target_second(self):
+        plan = self.plan()
+        del plan['receipts']
+        plan['fragments'].append({'track': 'program', 'target': [110, 120], 'session': 'side',
+                                  'asset': 'replay-side', 'rev': 1, 'source': [150, 160]})
+        result = self.splice(plan)
+        row = next(row for row in result['timeline'] if row['start'] == 110)
+        self.assertEqual((row['end'], row['reasons']), (117, ['program-source-ambiguous']))
+        self.assertIsNone(row['program'])
+        self.assertEqual(row['claims']['program'], [
+            {'session': 'main', 'asset': 'replay-main', 'rev': 1, 'start': 110, 'end': 117},
+            {'session': 'side', 'asset': 'replay-side', 'rev': 1, 'start': 150, 'end': 157}])
+        self.assertEqual(row['claims']['sign'], [
+            {'session': 'main', 'asset': 'replay-main', 'rev': 1, 'start': 110, 'end': 117}])
+
+    def test_splice_relay_witness_loss_propagates_to_source_seconds(self):
+        plan = self.plan()
+        plan['fragments'] += self.preroll((117, 120))
+        ingest(self.db, [self.edit('credential', 'c-lin-early', id='denial', rev=1, start=118, approved=0)])
+        agenda, crew, picture, delivery = build(self.db)
+        self.assertEqual(crew.assess('main')['handoffs'][0]['status'], 'no-qualified-overlap')
+        self.assertEqual(delivery.assess('main', 'replay-main')['gaps'][0]['reasons'], ['relay-gap'])
+        result = Splice(agenda, crew, picture, delivery).assess(plan)
+        row = next(row for row in result['timeline'] if row['start'] == 120)
+        self.assertEqual((row['end'], row['reasons']), (123, ['relay-gap']))
+        self.assertEqual(result['seams'][0]['status'], 'context')
+        self.assertEqual(result['delivered_seconds'], 37)
+
+    def test_splice_receipt_expiry_and_rejection_return_seam_reasons(self):
+        plan = self.plan()
+        plan['receipts'][0]['turn_rev'] = 2
+        result = self.splice(plan)
+        self.assertEqual(result['seams'][0]['reasons'], ['missing-relay-context', 'opening-receipt-expired'])
+        self.assertEqual(result['receipts'][0]['status'], 'expired')
+        self.assertEqual(result['receipts'][0]['reasons'], ['turn-stale'])
+        self.assertEqual(result['pending_seconds'], 6)
+        plan = self.plan()
+        plan['receipts'][0]['approved'] = 0
+        result = self.splice(plan)
+        self.assertEqual(result['seams'][0]['reasons'], ['missing-relay-context', 'opening-receipt-rejected'])
+        self.assertEqual(result['receipts'][0]['status'], 'rejected')
+        self.assertEqual(result['receipts'][0]['reasons'], ['not-approved'])
+
+    def test_splice_layout_revocation_reopens_inherited_intervals(self):
+        ingest(self.db, [self.edit('layout', 'replay-right')])
+        agenda, crew, picture, delivery = build(self.db)
+        self.assertEqual(delivery.assess('main', 'replay-main')['gap_seconds'], 40)
+        result = Splice(agenda, crew, picture, delivery).assess(self.plan())
+        self.assertEqual(result['pending_seconds'], 40)
+        self.assertEqual(result['delivered_seconds'], 0)
+        first, last = result['timeline'][0], result['timeline'][-1]
+        self.assertEqual((first['start'], first['end'], first['reasons']), (100, 117, ['stale-layout']))
+        self.assertEqual((last['start'], last['end'], last['reasons']), (120, 140, ['stale-layout']))
+        self.assertEqual(result['seams'][0]['status'], 'receipt')
+
+    def test_splice_plan_validation(self):
+        with self.assertRaisesRegex(ValueError, 'fragments array'):
+            self.splice({'fragments': []})
+        with self.assertRaisesRegex(ValueError, 'fragment requires'):
+            self.splice({'fragments': [{'track': 'program', 'target': [100, 117]}]})
+        with self.assertRaisesRegex(ValueError, 'equal length'):
+            self.splice({'fragments': [{'track': 'program', 'target': [100, 117], 'session': 'main',
+                                        'asset': 'replay-main', 'rev': 1, 'source': [100, 118]}]})
+        with self.assertRaisesRegex(ValueError, 'fragment.track'):
+            self.splice({'fragments': [{'track': 'dubbed', 'target': [100, 117], 'session': 'main',
+                                        'asset': 'replay-main', 'rev': 1, 'source': [100, 117]}]})
+        plan = self.plan()
+        plan['receipts'].append(plan['receipts'][0])
+        with self.assertRaisesRegex(ValueError, 'distinct'):
+            self.splice(plan)
+
+    def test_splice_cli_stays_read_only(self):
+        args = SimpleNamespace(command='splice', file=str(FIXTURES / 'splice-main.json'))
+        before = recompute(self.db)
+        output = run(self.db, args)
+        self.assertEqual(output['delivered_seconds'], 37)
+        self.assertEqual(output['seams'][0]['status'], 'receipt')
+        self.assertEqual(recompute(self.db), before)
+

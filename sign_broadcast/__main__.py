@@ -8,6 +8,7 @@ from .agenda import Agenda
 from .crew import Crew
 from .delivery import Delivery, resign
 from .picture import Picture
+from .splice import Splice
 from .store import connect, ingest, transaction
 
 
@@ -56,6 +57,7 @@ def parser():
     report = sub.add_parser('delivery')
     report.add_argument('session')
     report.add_argument('--asset')
+    sub.add_parser('splice').add_argument('file')
     sub.add_parser('recompute')
     sign = sub.add_parser('resign')
     for key in ('asset', 'basis', 'operator'):
@@ -76,6 +78,8 @@ def run(db, args):
         agenda, crew, picture, delivery = build(db)
         if args.command == 'delivery':
             return delivery.assess(args.session, args.asset)
+        if args.command == 'splice':
+            return Splice(agenda, crew, picture, delivery).assess(read(args.file))
         return {'agenda': agenda, 'crew': crew, 'picture': picture}[args.command].assess(args.id)
 
 

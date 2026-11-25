@@ -1,0 +1,14 @@
+{
+  "fragments": [
+    {"track":"program","target":[100,117],"session":"main","asset":"replay-main","rev":1,"source":[100,117]},
+    {"track":"program","target":[120,140],"session":"main","asset":"replay-main","rev":1,"source":[120,140]},
+    {"track":"sign","target":[100,117],"session":"main","asset":"replay-main","rev":1,"source":[100,117]},
+    {"track":"sign","target":[120,140],"session":"main","asset":"replay-main","rev":1,"source":[120,140]}
+  ],
+  "receipts": [
+    {"id":"opening-120","session":"main","source":120,
+     "program_asset":"replay-main","program_rev":1,
+     "sign_asset":"replay-main","sign_rev":1,
+     "turn":"turn-b","turn_rev":1,"approved":1}
+  ]
+}
